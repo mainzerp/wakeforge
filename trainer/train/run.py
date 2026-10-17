@@ -37,6 +37,18 @@ PROFILES = {
     "fast": {"steps": 10000, "eval_every": 500, "label": "Fast"},
     "thorough": {"steps": 40000, "eval_every": 1000, "label": "Thorough"},
 }
+BATCH_SIZE = 32
+# Learning rate phases as (share of the steps, rate). A constant 0.001 made the validation metrics jump from one
+# evaluation to the next (AVR 0.07-0.93 late in a 40k run), so best_weights was a lucky pick; the lower rates at
+# the end let the model settle before the best checkpoint is chosen.
+LR_SCHEDULE = [(0.6, 0.001), (0.25, 0.0003), (0.15, 0.0001)]
+
+
+def lr_phases(steps: int) -> tuple[list[int], list[float]]:
+    """Split the step count over LR_SCHEDULE; the last phase takes the rounding remainder."""
+    counts = [round(steps * share) for share, _ in LR_SCHEDULE[:-1]]
+    counts.append(steps - sum(counts))
+    return counts, [rate for _, rate in LR_SCHEDULE]
 MODEL_FLAGS = [
     "mixednet",
     "--pointwise_filters", "128,128,128,128",
@@ -136,14 +148,16 @@ class Run:
                 # One provider per cached item; weights proportional to size so the source as a whole keeps its
                 # sampling weight (microWakeWord first picks a provider by weight, then a random spectrogram).
                 features.append(self.feature(str(item.cache), s, s.sampling_weight * n / total if total else 0.0))
+        steps, rates = lr_phases(self.profile["steps"])
+        self.save_meta(batch_size=BATCH_SIZE, training_steps=steps, learning_rates=rates)
         config = {
-            "batch_size": 16,
+            "batch_size": BATCH_SIZE,
             "clip_duration_ms": CLIP_MS,
             "eval_step_interval": self.profile["eval_every"],
             "window_step_ms": 10,
             "train_dir": str(self.dir / "mww"),
-            "learning_rates": [0.001],
-            "training_steps": [self.profile["steps"]],
+            "learning_rates": rates,
+            "training_steps": steps,
             "positive_class_weight": [1],
             "negative_class_weight": [20],
             "maximization_metric": "average_viable_recall",

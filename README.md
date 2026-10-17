@@ -67,8 +67,8 @@ so spellings are verified before generating (`POST /api/tts/preview`, no project
    - Features (`featurize.py`): microWakeWord augmentation (RIR, background noise, EQ, ...) in a CPU pool, stored
      as uint16 (lossless, half of float32) and cropped to the 178 frames the model reads. Cached per corpus shard /
      WAV folder in `data/cache/features/<key>/`, keyed by content + feature version, shared across projects.
-   - Training: microWakeWord `model_train_eval` (mixednet as in the old trainer, batch 16, lr 0.001, negative class
-     weight 20) on the GPU (`mww_entry.py` refuses a CPU-only TF), profiles fast (10k steps) / thorough (40k), then the
+   - Training: microWakeWord `model_train_eval` (mixednet as in the old trainer, batch 32, lr 0.001 → 0.0003 → 0.0001
+     over 60/25/15 % of the steps, negative class weight 20) on the GPU (`mww_entry.py` refuses a CPU-only TF), profiles fast (10k steps) / thorough (40k), then the
      streaming int8 TFLite export.
    - Calibration (`calibrate.py`): the quantized streaming model runs over the test split and ~5 h ambient audio;
      cutoff + sliding window are picked for a target of false accepts per hour (default 0.25) with the old trainer's
