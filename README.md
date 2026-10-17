@@ -96,7 +96,17 @@ so spellings are verified before generating (`POST /api/tts/preview`, no project
    - First scan, thorough run `20261016-132045-thorough` (0.19 false accepts/h on the ambient set): 234 triggers in
      33.8 h of Kartoffelphon, 6.9 false accepts/h on German speech; the check labeled 228 and flagged 6 (all
      harmless: "ja wie", "ja würde", English sentences) in 27 s.
-6. Export (ESPHome manifest + `.tflite`) - planned, milestone 1
+6. Export (`trainer/export.py`): pick a finished run and one of its calibration points (cutoff); the UI shows recall,
+   false accepts/h on the ambient set and, if the run was mined, on real speech (trigger scores of the scan above
+   the chosen cutoff, triggers labeled as the wake word left out; only cutoffs >= the scan's cutoff are known).
+   - Output in `projects/<slug>/models/<YYYYMMDD-HHMMSS>/`: the run's `.tflite` unchanged, the ESPHome manifest with
+     the chosen `probability_cutoff` and the project's current name, author and website (edited on the export page),
+     `export.json` (run, operating point, metrics). The newest export is current.
+   - Into ESPHome: the .zip (manifest + model) into `esphome/wakeforge/` and `model: wakeforge/<slug>.json`, or both
+     files pushed to a public Git repo and `model: https://raw.githubusercontent.com/<owner>/<repo>/main/models/<slug>.json`,
+     or the
+     stable URL `/api/projects/<slug>/models/current/<slug>.json` (GET + HEAD, needs `WAKEFORGE_BIND`, see below),
+     which ESPHome checks for changes on every compile.
 
 The workflow is a loop (generate -> train -> mine -> train again -> mine again), so a guide (`trainer/guide.py`,
 `GET /api/projects/<slug>/guide`) derives the one next thing to do from the files: a running job, missing samples,
@@ -175,6 +185,9 @@ other machine (`... setup import <file.zip> [--slug name]`). Everything but `job
 
 The container starts the API and UI on http://localhost:8790 (uvicorn with auto-reload on `trainer/`).
 For UI development run `npm run dev` in `ui/` and open http://localhost:5173 (proxies `/api` to 8790).
+The port listens on 127.0.0.1 only. `WAKEFORGE_BIND=0.0.0.0` in `.env` opens it to the LAN, so ESPHome can fetch the
+current exported model from `http://<pc>:8790/api/projects/<slug>/models/current/<slug>.json` on every compile
+(the API has no login, so only in a trusted network).
 
 Shell into the container:
 

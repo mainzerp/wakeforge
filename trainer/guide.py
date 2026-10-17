@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from trainer import jobs, setup
+from trainer import export, jobs, setup
 from trainer.mining import store as mining
 from trainer.train.sources import project_sources
 from trainer.tts import corpus
@@ -66,6 +66,8 @@ def guide(project: Path) -> dict:
     scans = [mining.summary(d) for d in mining.mine_dirs(project)]
     open_reviews = sum(s["counts"]["open"] for s in scans if s.get("state") != "running")
     scanned = bool(run and any(s.get("run") == run["id"] and s.get("state") == "done" for s in scans))
+    exported = export.current(project)
+    fresh = bool(run and (not exported or exported["run"] != run["id"]))
     active = jobs.active()
     mine = active if active and active["project"] == project.name else None
     steps: dict[str, dict] = {}
@@ -79,6 +81,8 @@ def guide(project: Path) -> dict:
         steps["mining"] = note("{n} to check", n=open_reviews)
     elif run and not scanned and not diff:
         steps["mining"] = note("test the model")
+    if fresh and not diff:
+        steps["export"] = note("new model")
     # Sound-alikes: words close to the wake word, spoken by the voice bank (the old model fired on half of them).
     words = data.get("confusables") or []
     spoken = set(corpus.load_index(corpus.confusable_dir(project)).get("phrases") or [])
@@ -142,16 +146,19 @@ def guide(project: Path) -> dict:
     else:
         last = next((s for s in scans if s.get("run") == run["id"]), None)
         faph = last.get("faph") if last else None
-        tail = ("and every trigger is reviewed. Download it from the training step and try it on the device; scan more "
-                "audio or record your own rooms to find more false triggers.")
-        if faph is not None:
-            rec = nxt("train", "The model is up to date",
-                      "The newest model has been scanned ({faph} false triggers per hour of speech) " + tail,
-                      "Download the model", faph=round(faph, 2))
+        scanned_text = ("The newest model has been scanned ({faph} false triggers per hour of speech) " if faph is not None
+                        else "The newest model has been scanned ")
+        if fresh:
+            rec = nxt("export", "Export the newest model",
+                      scanned_text + "and every trigger is reviewed. Pick its operating point and export it for ESPHome.",
+                      "Export the model", **({"faph": round(faph, 2)} if faph is not None else {}))
         else:
-            rec = nxt("train", "The model is up to date", "The newest model has been scanned " + tail, "Download the model")
+            rec = nxt("export", "The model is up to date",
+                      "The newest model is exported (cutoff {cutoff}). Flash it to the device and try it; scan more "
+                      "audio or record your own rooms to find more false triggers.",
+                      "Open the export", cutoff=exported["probability_cutoff"])
     return {"next": rec, "steps": steps, "changes": diff, "run": run["id"] if run else None,
-            "wake_word": data.get("wake_word")}
+            "export": exported["id"] if exported else None, "wake_word": data.get("wake_word")}
 
 
 def fill(template: str, params: dict) -> str:

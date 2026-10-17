@@ -217,6 +217,47 @@ export interface TrainStatus {
   active: Job | null;
 }
 
+/** Trigger scores of a run's newest mining scan: false accepts on real speech for any cutoff >= min_cutoff */
+export interface SpeechScores {
+  id: string;
+  hours: number;
+  min_cutoff: number | null;
+  window: number | null;
+  sources: string[];
+  scores: number[];
+}
+
+export interface ExportRun extends TrainRun {
+  calibration: Calibration & { curve: CurvePoint[] };
+  files: { model: string; manifest: string; size: number };
+  speech: SpeechScores | null;
+}
+
+export interface ModelExport {
+  id: string;
+  run: string;
+  profile: string;
+  created: string;
+  wake_word: string;
+  author?: string;
+  website?: string;
+  probability_cutoff: number;
+  sliding_window_size: number;
+  calibrated_cutoff: number;
+  recall: number;
+  false_accepts_per_hour: number;
+  ambient_hours: number;
+  speech_false_accepts_per_hour: number | null;
+  speech_hours: number | null;
+  files: { model: string; manifest: string; size: number };
+}
+
+export interface ModelsStatus {
+  runs: ExportRun[];
+  exports: ModelExport[];
+  current: string | null;
+}
+
 export interface ConfusableParams {
   count: number;
   speed: Range;
@@ -384,6 +425,8 @@ export interface Guide {
   /** training data that changed since the newest model */
   changes: GuideChange[];
   run: string | null;
+  /** the current (newest) export */
+  export: string | null;
 }
 
 export type SetupUse = "training" | "generation" | "mining";

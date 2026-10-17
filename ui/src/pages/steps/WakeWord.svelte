@@ -47,8 +47,6 @@
     <PronunciationCheck language={settings.language} phrases={settings.tts_phrases} />
     <hr />
     <SoundAlikes bind:words={settings.confusables} language={settings.language} phrases={settings.tts_phrases} project={project.slug} auto="show" />
-    <hr />
-    <ProjectFields bind:settings sections={["manifest"]} />
     <div class="actions">
       <button onclick={() => (settings = pick(project))} disabled={!dirty || busy} class="ghost">{t("Revert")}</button>
       <button class="primary" onclick={save} disabled={!dirty || busy}><Icon name="check" size={16} /> {t("Save")}</button>

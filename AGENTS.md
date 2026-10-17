@@ -57,6 +57,9 @@
   The scan job then runs `py-omni -m trainer.mining.triage` as a child (strip LD_LIBRARY_PATH between venvs). The
   check only auto-labels negatives because the source is declared wake-word free: phones and Whisper alone miss
   real wake words (measured), so never let them label without that guarantee. A person's label always wins.
+- Export (`trainer/export.py`, `trainer/server/models_api.py`): exports live in `data/projects/<slug>/models/<id>/`,
+  the newest is "current" and served at a stable URL for ESPHome. The manifest must keep only ESPHome's keys
+  (extra keys fail its validation). The port binds to 127.0.0.1 unless `WAKEFORGE_BIND` is set in `.env`.
 - Modules run with `python script.py` inside the container need `-e PYTHONPATH=/app`; `-m trainer...` works as is.
 - Quick backend run on the host without Docker (Studio only, no GPU):
   `uv run --no-project --python 3.12 --with fastapi==0.142.4 --with uvicorn==0.54.0 --with soundfile==0.14.0 --with scipy==1.18.1 --with numpy==2.5.3 python -m uvicorn trainer.server.app:app --port 8790`

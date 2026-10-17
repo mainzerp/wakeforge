@@ -4,8 +4,8 @@
   import BorrowNegatives from "../components/project/BorrowNegatives.svelte";
   import NextStep from "../components/project/NextStep.svelte";
   import Stepper from "../components/project/Stepper.svelte";
-  import Soon from "./Soon.svelte";
   import Studio from "./Studio.svelte";
+  import Export from "./steps/Export.svelte";
   import Generate from "./steps/Generate.svelte";
   import Mining from "./steps/Mining.svelte";
   import Train from "./steps/Train.svelte";
@@ -127,8 +127,8 @@
       {:else if current === "record"}
         <Studio />
         <BorrowNegatives {project} />
-      {:else}
-        <Soon step={current} />
+      {:else if current === "export"}
+        <Export {project} />
       {/if}
     {/key}
 

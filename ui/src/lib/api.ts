@@ -14,6 +14,8 @@ import type {
   MiningLabel,
   MiningRun,
   MiningStatus,
+  ModelExport,
+  ModelsStatus,
   Project,
   ProjectSettings,
   Session,
@@ -78,6 +80,16 @@ export const mining = {
     post<{ run: MiningRun; totals: MiningStatus["totals"] }>(`${projectBase()}/mining/runs/${id}/label`, { hits, label }),
   deleteRun: (id: string) => post<{ ok: boolean }>(`${projectBase()}/mining/runs/${id}/delete`, {}),
   clipUrl: (id: string, n: number) => `${projectBase()}/mining/runs/${id}/clips/${n}.wav`,
+};
+
+export const models = {
+  status: () => request<ModelsStatus>(`${projectBase()}/models`),
+  create: (run: string, cutoff: number) => post<ModelExport>(`${projectBase()}/models`, { run, cutoff }),
+  remove: (id: string) => post<{ ok: boolean }>(`${projectBase()}/models/${id}/delete`, {}),
+  fileUrl: (id: string, name: string) => `${projectBase()}/models/${id}/files/${encodeURIComponent(name)}`,
+  zipUrl: (id: string) => `${projectBase()}/models/${id}/zip`,
+  /** always the newest export: the URL for ESPHome's YAML */
+  currentUrl: (name: string) => `${projectBase()}/models/current/${encodeURIComponent(name)}`,
 };
 
 export const setupApi = {

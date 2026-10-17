@@ -10,7 +10,6 @@ export interface Step {
   how: string;
   available: boolean;
   optional?: boolean;
-  milestone?: string;
 }
 
 export const STEPS = [
@@ -32,7 +31,7 @@ export const STEPS = [
   {
     id: "train", label: "Training", icon: "pulse", available: true,
     sub: "Featurize, train on the GPU and calibrate the on-device operating point.",
-    how: "Fast (about 20 minutes) gives a first model to try, Thorough (about 40 minutes) is the one to keep. Every run picks its own cutoff for the false alarm target and can be downloaded for ESPHome. Train again whenever new clips arrived, e.g. after mining.",
+    how: "Fast (about 20 minutes) gives a first model to try, Thorough (about 40 minutes) is the one to keep. Every run picks its own cutoff for the false alarm target; the export step hands it to ESPHome. Train again whenever new clips arrived, e.g. after mining.",
   },
   {
     id: "mining", label: "Mining", icon: "radar", available: true, optional: true,
@@ -40,9 +39,9 @@ export const STEPS = [
     how: "Scan with the newest model; an automatic check labels the clear false triggers and leaves the doubtful ones for you. Then train again and scan the new model: repeat until hardly anything triggers.",
   },
   {
-    id: "export", label: "Export", icon: "download", available: false, milestone: "Milestone 1",
+    id: "export", label: "Export", icon: "download", available: true,
     sub: "Pick an operating point and ship it to ESPHome.",
-    how: "Coming soon. Until then, download the .tflite and the .json manifest of a run in the training step.",
+    how: "Choose a model (normally the newest) and slide the cutoff: higher means fewer false alarms but more misses. The calibrated point is a good start; if the model was scanned in the mining step, you also see its false alarms on real speech. Download it as .zip (manifest + model) and put both files next to the device's ESPHome YAML.",
   },
 ] as const satisfies readonly Step[];
 
