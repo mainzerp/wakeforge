@@ -58,7 +58,7 @@ export default {
   "Fast": "Schnell",
   "Thorough": "Gründlich",
   "a first model to try on the device": "ein erstes Modell zum Ausprobieren auf dem Gerät",
-  "the one to keep, like the old trainer's default": "das zum Behalten, wie der Standard des alten Trainers",
+  "the one to keep": "das zum Behalten",
   "Synthetic positives": "Synthetische Positive",
   "Own recordings: wake word": "Eigene Aufnahmen: Wake Word",
   "Own recordings: not the wake word": "Eigene Aufnahmen: nicht das Wake Word",

@@ -20,7 +20,7 @@ RUN_RE = re.compile(r"^\d{8}-\d{6}-[a-z]+$")
 FILE_RE = re.compile(r"^[a-z0-9_]+\.(tflite|json)$")
 PROFILES = {
     "fast": {"label": "Fast", "steps": 10000, "hint": "a first model to try on the device"},
-    "thorough": {"label": "Thorough", "steps": 40000, "hint": "the one to keep, like the old trainer's default"},
+    "thorough": {"label": "Thorough", "steps": 40000, "hint": "the one to keep"},
 }
 
 
