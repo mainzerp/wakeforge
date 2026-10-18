@@ -16,6 +16,9 @@
   (GraphemeAug-style spelling mutations, milestone 2). The user prefers the spelling "Jarvis".
 - Spike venvs (`/opt/spike/{qwen,omni,voxcpm,audio8,asr}`) and `gcc` (Triton for Qwen) were installed into
   the running container only; they vanish on rebuild. OmniVoice does not need gcc.
+- Never poll a running job's files (`progress.json`, `corpus.json`, ...) from the Windows host: an open handle makes
+  the container's atomic `os.replace` fail with EACCES (this once killed a training run). Read them via
+  `docker exec wakeforge cat ...` or the API; workers write progress through `jobs.write_progress_file` (retries).
 - From Git Bash, prefix docker commands with `MSYS_NO_PATHCONV=1`, otherwise `/opt/...` paths get
   rewritten to `C:/Program Files/Git/opt/...`.
 - GPU code must fail hard when CUDA is unavailable (never silently fall back to CPU).

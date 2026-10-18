@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 import signal
@@ -31,7 +30,7 @@ from pathlib import Path
 
 import yaml
 
-from trainer import projects
+from trainer import jobs, projects
 from trainer.train import calibrate, featurize
 from trainer.train.sources import Source, project_sources
 
@@ -129,9 +128,7 @@ class Run:
 
     def write(self, **update) -> None:
         self.progress.update(update, updated=time.time())
-        tmp = self.job / "progress.json.tmp"
-        tmp.write_text(json.dumps(self.progress), encoding="utf-8")
-        os.replace(tmp, self.job / "progress.json")
+        jobs.write_progress_file(self.job, self.progress)
 
     def save_meta(self, **update) -> None:
         self.meta.update(update)

@@ -25,6 +25,26 @@ from trainer.paths import PROJECTS, REPO_ROOT, SYSTEM
 JOB_RE = re.compile(r"^\d{8}-\d{6}-[a-z]+$")
 LOG_TAIL_BYTES = 6000
 LOG_NOISE = ("W:onnxruntime", "XNNPACK delegate")
+REPLACE_TRIES = 50  # x 0.1 s
+
+
+def write_progress_file(job: Path, data: dict) -> None:
+    """Atomically replace <job>/progress.json (workers in every venv use this).
+
+    On the Windows bind mount the rename fails with EACCES while a Windows process has the file open (an editor, a
+    script polling it from the host), which once killed a training run at step 10000. A progress update must not end
+    a job, so the rename is retried for a few seconds.
+    """
+    tmp = job / "progress.json.tmp"
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    for attempt in range(REPLACE_TRIES):
+        try:
+            os.replace(tmp, job / "progress.json")
+            return
+        except PermissionError:
+            if attempt == REPLACE_TRIES - 1:
+                raise
+            time.sleep(0.1)
 
 
 def pid_alive(pid: int) -> bool:

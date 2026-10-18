@@ -34,7 +34,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from trainer import projects
+from trainer import jobs, projects
 from trainer.mining import audio, store
 from trainer.train.calibrate import COOLDOWN, moving_average
 
@@ -50,9 +50,7 @@ _cfg: dict = {}
 
 def write_progress(job: Path, **data) -> None:
     data["updated"] = time.time()
-    tmp = job / "progress.json.tmp"
-    tmp.write_text(json.dumps(data), encoding="utf-8")
-    os.replace(tmp, job / "progress.json")
+    jobs.write_progress_file(job, data)
 
 
 def pcm16(samples: np.ndarray) -> bytes:

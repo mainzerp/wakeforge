@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import random
 import signal
 import time
@@ -31,7 +30,7 @@ import soundfile as sf
 import torch
 from scipy.signal import resample_poly
 
-from trainer import models
+from trainer import jobs, models
 from trainer.tts import corpus
 from trainer.tts.phonetic import MIN_NEGATIVE_PHONES, POSITIVE_MAX, PhoneChecker, Score
 from trainer.tts.voices import load_bank, voice_dir
@@ -48,9 +47,7 @@ DESIGN_ATTRS = {
 
 def write_progress(job: Path, **data) -> None:
     data["updated"] = time.time()
-    tmp = job / "progress.json.tmp"
-    tmp.write_text(json.dumps(data), encoding="utf-8")
-    os.replace(tmp, job / "progress.json")
+    jobs.write_progress_file(job, data)
 
 
 class Cycle:

@@ -24,13 +24,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import signal
 import time
 from pathlib import Path
 
-from trainer import models
+from trainer import jobs, models
 from trainer.mining import store
 from trainer.tts import phonetic
 
@@ -44,9 +43,7 @@ def update_progress(job: Path, **data) -> None:
     """Merge into progress.json: when the scan job runs the check, its own fields stay."""
     progress = store.read_json(job / "progress.json", {})
     progress.update(data, updated=time.time())
-    tmp = job / "progress.json.tmp"
-    tmp.write_text(json.dumps(progress), encoding="utf-8")
-    os.replace(tmp, job / "progress.json")
+    jobs.write_progress_file(job, progress)
 
 
 def normalize(text: str) -> list[str]:

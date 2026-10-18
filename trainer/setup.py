@@ -43,6 +43,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import Callable, Iterator
 
+from trainer import jobs
 from trainer.paths import DATA, DATASETS, DOWNLOADS, PROJECTS, VOICES
 
 HF = "https://huggingface.co/datasets"
@@ -368,9 +369,7 @@ class Setup:
         rate = done / max(1e-6, now - self.t0)
         self.progress.update(rate=round(rate), eta=round((self.progress["total_bytes"] - done) / rate) if rate > 1e5 else None,
                              updated=time.time())
-        tmp = self.job / "progress.json.tmp"
-        tmp.write_text(json.dumps(self.progress), encoding="utf-8")
-        os.replace(tmp, self.job / "progress.json")
+        jobs.write_progress_file(self.job, self.progress)
 
     def item(self, item_id: str, **update) -> None:
         self.progress["items"][item_id].update(update)
