@@ -13,7 +13,6 @@
   const PAGES = [
     { id: "name", title: "Name your wake word", text: "This is the word your device listens for. It also becomes the name in ESPHome." },
     { id: "phrases", title: "Teach the pronunciation", text: "Check how the synthetic voices should spell it, and which similar words the model must ignore. You can change both any time." },
-    { id: "manifest", title: "Credits", text: "Optional fields for the published ESPHome manifest." },
     { id: "review", title: "Ready to forge", text: "Here is what happens next. Every step stays reachable from the step bar." },
   ] as const;
 
@@ -78,7 +77,6 @@
           <div class="chips">
             <span class="chip">{t(LANGUAGES[settings.language] ?? settings.language)}</span>
             {#each settings.tts_phrases as p (p)}<span class="chip pos">{p}</span>{/each}
-            {#if settings.author}<span class="chip">{t("by {author}", { author: settings.author })}</span>{/if}
           </div>
         </div>
         <ol class="plan">
@@ -124,7 +122,7 @@
   }
   .progress {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     margin-bottom: 18px;
   }

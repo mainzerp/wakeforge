@@ -54,34 +54,6 @@ body::before {
     radial-gradient(1200px 800px at 50% 50%, var(--bg-1), var(--bg-0));
 }
 
-/* Synthwave horizon grid, very faint so it never fights the content */
-body::after {
-  content: "";
-  position: fixed;
-  left: -50%;
-  right: -50%;
-  bottom: -10vh;
-  height: 55vh;
-  z-index: -1;
-  background:
-    repeating-linear-gradient(90deg, rgba(155, 107, 255, 0.11) 0 1px, transparent 1px 80px),
-    repeating-linear-gradient(0deg, rgba(155, 107, 255, 0.11) 0 1px, transparent 1px 60px);
-  transform: perspective(420px) rotateX(62deg);
-  transform-origin: top center;
-  mask-image: linear-gradient(to bottom, transparent, black 40%, black);
-  animation: grid-scroll 6s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes grid-scroll {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 0 0, 0 60px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::after { animation: none; }
-}
-
 ::selection {
   background: rgba(255, 61, 242, 0.35);
 }

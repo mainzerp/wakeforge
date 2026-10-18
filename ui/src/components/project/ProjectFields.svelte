@@ -3,11 +3,11 @@
   import { t } from "../../lib/i18n.svelte";
   import { LANGUAGES, type ProjectSettings } from "../../lib/types";
 
-  type Section = "name" | "phrases" | "manifest";
+  type Section = "name" | "phrases";
 
   let {
     settings = $bindable(),
-    sections = ["name", "phrases", "manifest"],
+    sections = ["name", "phrases"],
     hero = false,
   }: { settings: ProjectSettings; sections?: Section[]; hero?: boolean } = $props();
 
@@ -73,21 +73,6 @@
   </div>
 {/if}
 
-{#if sections.includes("manifest")}
-  <div class="manifest">
-    <span class="eyebrow">{t("ESPHome manifest")}</span>
-    <div class="row">
-      <label class="field">
-        {t("Author")}
-        <input bind:value={settings.author} maxlength="60" placeholder={t("optional")} />
-      </label>
-      <label class="field">
-        {t("Website")}
-        <input bind:value={settings.website} maxlength="200" placeholder={t("https://… (optional)")} />
-      </label>
-    </div>
-  </div>
-{/if}
 
 <style>
   .name {
@@ -126,8 +111,7 @@
   .hint.warn {
     color: var(--amber);
   }
-  .phrases,
-  .manifest {
+  .phrases {
     display: flex;
     flex-direction: column;
     gap: 10px;
