@@ -18,6 +18,35 @@ Status: early. Web UI with projects, setup wizard, synthetic samples, sound-alik
 (featurize, train, calibrate, ESPHome manifest + `.tflite` per run) and mining work; the export page is next.
 The UI switches between English and German (top bar).
 
+## Published models
+
+| Wake word | Spoken as | Language | Manifest | Cutoff / window |
+|---|---|---|---|---|
+| Dscharwis | "Jarvis" (German pronunciation) | German (`de`) | [`models/dscharwis.json`](models/dscharwis.json) | 0.97 / 3 |
+
+```yaml
+micro_wake_word:
+  models:
+    - model: https://raw.githubusercontent.com/mainzerp/wakeforge/main/models/dscharwis.json
+```
+
+ESPHome checks the `https://` URL for updates on every compile.
+
+`dscharwis` (2026-10-18, run `20261018-112831-thorough`): 25,000 voice-cloned TTS samples (OmniVoice) and 98 real
+recordings; as negatives 8,000 sound-alikes (letter variants and the phrases that triggered earlier models, e.g.
+"ja das", "Charlie", "scharf"), 295 false triggers mined from 33.8 h of German speech (Kartoffelphon) and the shared
+speech/noise sets; 40,000 steps. Held-out measurements per cutoff (window 3):
+
+| Cutoff | Recall (test clips) | False accepts/h, ambient (5.3 h) | False accepts/h, German speech (33.8 h) |
+|---|---|---|---|
+| 0.95 | 93.8 % | 0.56 | 0.71 |
+| **0.97** | **92.6 %** | **0.56** | **0.53** |
+| 0.99 (calibrated) | 89.7 % | 0.19 | 0.36 |
+
+Raise the cutoff if it wakes up too often, lower it if it misses you (copy the manifest and change
+`probability_cutoff`). The speech numbers are optimistic: the false triggers were mined from the same audio.
+Earlier versions (trained with the TaterTotterson container) are in the private `mainzerp/wake_word` repo.
+
 ## Languages
 
 Wake words are **German only for now** (decision 2026-10-16). The pipeline is built language-aware, but only German
