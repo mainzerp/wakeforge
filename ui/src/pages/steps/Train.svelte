@@ -333,6 +333,12 @@
                     </tbody>
                   </table>
                   {#if !dc.met_target}<p class="hint warn">{t("No operating point met {target} FA/h; this is the best fallback.", { target: dc.target_false_accepts_per_hour })}</p>{/if}
+                  {#each detail.checkpoints ?? [] as k (k.name)}
+                    <p class="hint">
+                      {t(k.name === "last" ? "Last checkpoint (step {step})" : "Best validation checkpoint (step {step})", { step: k.step ?? "–" })}:
+                      <span class="mono">{pct(k.recall)}</span> {t("recall")}, <span class="mono">{k.false_accepts_per_hour.toFixed(2)}</span> FA/h{#if k.name === detail.checkpoint}, <strong>{t("used as the model")}</strong>{/if}
+                    </p>
+                  {/each}
                 </div>
               </div>
             {:else if !r.error}

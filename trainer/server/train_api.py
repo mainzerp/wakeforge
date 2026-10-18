@@ -41,6 +41,11 @@ def read_run(path: Path, full: bool = False) -> dict:
         data = json.loads((path / "run.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         data = {"id": path.name, "state": "unknown"}
+    if data.get("state") == "running" and data.get("job"):
+        # A killed worker (container restart, SIGKILL) never writes its final state
+        job_dir = path.parent.parent / "jobs" / data["job"]
+        if not jobs.job_alive(job_dir, jobs.read_json(job_dir / "job.json")):
+            data["state"] = "stopped"
     if not full:
         data.pop("history", None)
         data.pop("sources", None)

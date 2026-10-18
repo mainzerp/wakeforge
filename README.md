@@ -69,12 +69,14 @@ so spellings are verified before generating (`POST /api/tts/preview`, no project
      WAV folder in `data/cache/features/<key>/`, keyed by content + feature version, shared across projects.
    - Training: microWakeWord `model_train_eval` (mixednet as in the old trainer, batch 32, lr 0.001 → 0.0003 → 0.0001
      over 60/25/15 % of the steps, negative class weight 20) on the GPU (`mww_entry.py` refuses a CPU-only TF), profiles fast (10k steps) / thorough (40k), then the
-     streaming int8 TFLite export.
+     streaming int8 TFLite export of both the best-validation and the last checkpoint.
    - Calibration (`calibrate.py`): the quantized streaming model runs over the test split and ~5 h ambient audio;
      cutoff + sliding window are picked for a target of false accepts per hour (default 0.25) with the old trainer's
-     tier rule; recall per positive source and trigger rate per word-like negative source are reported.
+     tier rule; recall per positive source and trigger rate per word-like negative source are reported. Both
+     checkpoints are calibrated and the one meeting the target with the higher recall becomes the model (ties: last;
+     the best-validation pick was a step-15000 spike in a 40k run and lost to the last weights).
    - Output per run in `projects/<slug>/runs/<id>/`: `<wake_word>.tflite`, `<wake_word>.json` (ESPHome manifest,
-     allowed keys only), `run.json` (sources, validation history, calibration curve), `mww/` (checkpoints, logs).
+     allowed keys only), `run.json` (sources, validation history, calibration curve), `mww/` (checkpoints, `tflite_best/` and `tflite_last/`, logs).
 5. Mining (`trainer/mining/`, optional): a background job streams a run's int8 TFLite model over hours of real
    audio on the CPU, exactly like the device (microfrontend via pymicro_features, 2 slices per invoke, window average,
    cooldown; scores match `calibrate.py` to 1e-7), with 12 worker processes and no TF import, ~1800x realtime.

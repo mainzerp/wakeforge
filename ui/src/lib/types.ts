@@ -194,9 +194,22 @@ export interface TrainRun {
   wake_word?: string;
   target_faph?: number;
   calibration?: Calibration;
+  /** Which checkpoint became the model; both are calibrated (trainer/train/run.py CHECKPOINTS) */
+  checkpoint?: "last" | "best";
+  checkpoints?: CheckpointResult[];
   files?: { model: string; manifest: string; size: number };
   history?: ValPoint[];
   sources?: TrainSource[];
+}
+
+export interface CheckpointResult {
+  name: "last" | "best";
+  step: number | null;
+  probability_cutoff: number;
+  sliding_window_size: number;
+  recall: number;
+  false_accepts_per_hour: number;
+  met_target: boolean;
 }
 
 export interface TrainJob extends Job {

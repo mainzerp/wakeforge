@@ -31,7 +31,7 @@ export const STEPS = [
   {
     id: "train", label: "Training", icon: "pulse", available: true,
     sub: "Featurize, train on the GPU and calibrate the on-device operating point.",
-    how: "Fast (about 20 minutes) gives a first model to try, Thorough (about 40 minutes) is the one to keep. Every run picks its own cutoff for the false alarm target; the export step hands it to ESPHome. Train again whenever new clips arrived, e.g. after mining.",
+    how: "Fast (about 20 minutes) gives a first model to try, Thorough (about 40 minutes) is the one to keep. Every run keeps the better of its last and its best validation checkpoint and picks its own cutoff for the false alarm target; the export step hands it to ESPHome. Train again whenever new clips arrived, e.g. after mining.",
   },
   {
     id: "mining", label: "Mining", icon: "radar", available: true, optional: true,
