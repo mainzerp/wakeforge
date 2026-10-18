@@ -10,6 +10,7 @@ import type {
   Guide,
   Job,
   Label,
+  MinedSoundAlike,
   MiningHit,
   MiningLabel,
   MiningRun,
@@ -80,6 +81,9 @@ export const mining = {
     post<{ run: MiningRun; totals: MiningStatus["totals"] }>(`${projectBase()}/mining/runs/${id}/label`, { hits, label }),
   deleteRun: (id: string) => post<{ ok: boolean }>(`${projectBase()}/mining/runs/${id}/delete`, {}),
   clipUrl: (id: string, n: number) => `${projectBase()}/mining/runs/${id}/clips/${n}.wav`,
+  soundAlikes: () => request<{ candidates: MinedSoundAlike[] }>(`${projectBase()}/mining/sound-alikes`),
+  takeSoundAlikes: (add: string[], reject: string[]) =>
+    post<{ project: Project; candidates: MinedSoundAlike[] }>(`${projectBase()}/mining/sound-alikes`, { add, reject }),
 };
 
 export const models = {

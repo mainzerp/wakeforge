@@ -33,8 +33,10 @@ from trainer.tts import confusables, corpus, phonetic
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 LANGUAGE_RE = re.compile(r"^[a-z]{2}$")
-SETTINGS = ("wake_word", "language", "tts_phrases", "author", "website", "borrow_negatives", "confusables")
+SETTINGS = ("wake_word", "language", "tts_phrases", "author", "website", "borrow_negatives", "confusables",
+            "confusables_rejected")
 MAX_CONFUSABLES = 200
+MAX_REJECTED = 2000
 BORROW_KINDS = ("recordings", "synthetic")
 # Phone distance between the two wake words (see phonetic.word_distance). Up to CONFLICT_MAX the other project's
 # clips would teach contradicting labels ("Jarvis" vs. "Hey Jarvis") and are refused. Up to CLOSE_MAX they are
@@ -77,6 +79,9 @@ def clean_settings(raw: dict) -> dict:
         if len(words) > MAX_CONFUSABLES or any(len(w) > 60 for w in words):
             raise ValueError(f"at most {MAX_CONFUSABLES} sound-alikes of 1-60 characters")
         settings["confusables"] = words
+    if "confusables_rejected" in settings:
+        settings["confusables_rejected"] = list(dict.fromkeys(
+            w.strip() for w in settings["confusables_rejected"] if w.strip()))[-MAX_REJECTED:]
     if "borrow_negatives" in settings:
         borrow = {}
         for entry in settings["borrow_negatives"]:
@@ -121,7 +126,8 @@ def read(path: Path) -> dict:
 def load(path: Path) -> dict:
     data = read(path)
     return {**data, "slug": path.name, "borrow_negatives": data.get("borrow_negatives", []),
-            "confusables": data.get("confusables", []), "summary": summary(path, data)}
+            "confusables": data.get("confusables", []), "confusables_rejected": data.get("confusables_rejected", []),
+            "summary": summary(path, data)}
 
 
 def similarity(a: dict, b: dict) -> dict:
@@ -208,7 +214,13 @@ def create(raw: dict) -> dict:
 def update(slug: str, raw: dict) -> dict:
     path = project_dir(slug)
     data = load(path)
+    before = data["confusables"]
     data.update(clean_settings(raw))
+    # Sound-alikes taken off the list count as turned down (mining stops offering them); listed ones never are.
+    listed = {w.lower() for w in data["confusables"]}
+    dropped = [w for w in before if w.lower() not in listed]
+    data["confusables_rejected"] = [w for w in dict.fromkeys([*data["confusables_rejected"], *dropped])
+                                    if w.lower() not in listed][-MAX_REJECTED:]
     # Only a changed selection is validated; a wake word renamed into a conflict just makes borrowed_sources skip it.
     for entry in data["borrow_negatives"] if raw.get("borrow_negatives") is not None else []:
         if entry["slug"] == slug:

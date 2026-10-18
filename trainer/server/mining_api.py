@@ -13,6 +13,7 @@ from trainer import jobs, projects
 from trainer.mining import audio, store
 from trainer.server.generate_api import py_omni
 from trainer.server.train_api import py_train, read_run, run_dir, run_dirs
+from trainer.tts import confusables
 
 router = APIRouter(prefix="/api/projects/{slug}/mining")
 
@@ -27,6 +28,11 @@ class MineBody(BaseModel):
 class LabelBody(BaseModel):
     hits: list[int] = Field(min_length=1)
     label: Literal["negative", "positive", "skip"] | None
+
+
+class SoundAlikeBody(BaseModel):
+    add: list[str] = []
+    reject: list[str] = []
 
 
 def models(path: Path) -> list[dict]:
@@ -55,6 +61,28 @@ def status(slug: str) -> dict:
         "job": max(filter(None, (jobs.latest(path, "mining"), jobs.latest(path, "triage"))), key=lambda j: j["id"], default=None),
         "active": jobs.active(),
     }
+
+
+def sound_alike_candidates(path: Path, data: dict) -> list[dict]:
+    return confusables.mined_candidates(path, data["tts_phrases"], data["language"],
+                                        [*data["confusables"], *data["confusables_rejected"]])
+
+
+@router.get("/sound-alikes")
+def sound_alikes(slug: str) -> dict:
+    """Phrases of the false triggers that sound close to the wake word and are not sound-alikes yet (espeak, CPU)."""
+    path = projects.project_dir(slug)
+    return {"candidates": sound_alike_candidates(path, projects.load(path))}
+
+
+@router.post("/sound-alikes")
+def take_sound_alikes(slug: str, body: SoundAlikeBody) -> dict:
+    """Add phrases to the sound-alikes and/or turn others down so they are not offered again."""
+    path = projects.project_dir(slug)
+    data = projects.load(path)
+    project = projects.update(slug, {"confusables": [*data["confusables"], *body.add],
+                                     "confusables_rejected": [*data["confusables_rejected"], *body.reject]})
+    return {"project": project, "candidates": sound_alike_candidates(path, project)}
 
 
 @router.post("/start")

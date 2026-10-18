@@ -16,7 +16,7 @@ from pathlib import Path
 from trainer import export, jobs, setup
 from trainer.mining import store as mining
 from trainer.train.sources import project_sources
-from trainer.tts import corpus
+from trainer.tts import confusables, corpus
 
 KIND_STEP = {"generate": "generate", "confusables": "generate", "train": "train", "mining": "mining", "triage": "mining"}
 KIND_LABEL = {"generate": "Synthetic samples are being generated", "confusables": "Sound-alikes are being generated",
@@ -92,6 +92,12 @@ def guide(project: Path) -> dict:
         steps["wakeword"] = note("add sound-alikes")
     if unspoken or (words and not alike_clips):
         steps["generate"] = note("{n} sound-alikes to generate", n=len(unspoken) or len(words))
+    # Phrases of the false triggers that would make good sound-alikes; offered in the mining step until taken or
+    # turned down (project.json "confusables_rejected").
+    offered = confusables.mined_candidates(project, data.get("tts_phrases") or [data["wake_word"]], data["language"],
+                                           [*words, *(data.get("confusables_rejected") or [])]) if scans else []
+    if offered and not open_reviews:
+        steps["mining"] = note("{n} sound-alikes to pick", n=len(offered))
 
     def nxt(step: str, title: str, text: str, action: str | None = None, **params) -> dict:
         """Texts are templates with {name} placeholders: the UI translates the template and fills in the params."""
@@ -130,14 +136,21 @@ def guide(project: Path) -> dict:
         rec = nxt("mining", "Check {n} triggers",
                   "The automatic check could not decide these. Listen and label them; afterwards train again so the "
                   "model learns from them.", "Review triggers", n=open_reviews)
+    elif offered:
+        rec = nxt("mining", "Turn {n} false triggers into sound-alikes",
+                  "These phrases triggered the model in real speech and sound close to the wake word. As sound-alikes "
+                  "the voices speak each of them hundreds of times, which teaches the model more than the few real "
+                  "clips. Pick them in the mining step, then generate their clips and train again.",
+                  "Pick sound-alikes", n=len(offered))
+    elif unspoken:
+        # Before "train again": one run then learns from the new mined clips and the new sound-alikes together.
+        rec = nxt("generate", "Generate clips for the new sound-alikes",
+                  "{n} sound-alike words were added after the last generation and are not spoken yet. Top up the "
+                  "sound-alike clips, then train again.", "Generate sound-alikes", n=len(unspoken))
     elif diff:
         rec = nxt("train", "Train again: the model does not know the new data yet",
                   "Since the last model ({run}): {changes}. Clips only take effect in a new training run; then scan again "
                   "to see whether the false triggers went down.", "Train again", run=run["id"], changes=describe(diff))
-    elif unspoken:
-        rec = nxt("generate", "Generate clips for the new sound-alikes",
-                  "{n} sound-alike words were added after the last generation and are not spoken yet. Top up the "
-                  "sound-alike clips, then train again.", "Generate sound-alikes", n=len(unspoken))
     elif not scanned:
         rec = nxt("mining", "Test the model on real speech",
                   "Mining runs the newest model over hours of speech and collects what triggers it. The clear false "

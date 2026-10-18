@@ -8,7 +8,7 @@
   import { locale, plural, t } from "../../lib/i18n.svelte";
   import { href } from "../../lib/router.svelte";
   import { app, toast, toastError } from "../../lib/state.svelte";
-  import type { MiningRun, MiningStatus, Project } from "../../lib/types";
+  import type { MinedSoundAlike, MiningRun, MiningStatus, Project } from "../../lib/types";
 
   let { project }: { project: Project } = $props();
 
@@ -22,6 +22,9 @@
   let selected = $state<string | null>(null);
   let busy = $state(false);
   let showLog = $state(false);
+  // Phrases of the false triggers that would make good sound-alikes, and which of them are ticked
+  let alikes = $state<MinedSoundAlike[]>([]);
+  let picked = $state<string[]>([]);
 
   const job = $derived(status?.job ?? null);
   const running = $derived(!!job && job.alive && (job.state === "running" || job.state === "starting"));
@@ -42,6 +45,8 @@
         chosen = s.sources.map((x) => x.id);
         selected = s.runs[0]?.id ?? null;
       }
+      // On open and after a scan (its check labels triggers): the offered sound-alikes may have changed
+      if (!status || (wasRunning && !s.job?.alive)) loadAlikes();
       status = s;
       if (wasRunning && s.job && !s.job.alive) {
         if (s.job.state === "failed") toastError(s.job.message ? serverText(s.job.message) : t("Mining failed"));
@@ -67,6 +72,37 @@
     const m = current;
     untrack(() => (cutoff = m ? m.cutoff : null));
   });
+
+  async function loadAlikes() {
+    try {
+      setAlikes((await mining.soundAlikes()).candidates);
+    } catch (e) {
+      toastError(e);
+    }
+  }
+
+  function setAlikes(list: MinedSoundAlike[]) {
+    const known = new Set(alikes.map((a) => a.text));
+    // New phrases start ticked; the user's choice for the ones already shown stays
+    picked = list.filter((a) => (known.has(a.text) ? picked.includes(a.text) : true)).map((a) => a.text);
+    alikes = list;
+  }
+
+  async function takeAlikes() {
+    const add = alikes.filter((a) => picked.includes(a.text)).map((a) => a.text);
+    const reject = alikes.filter((a) => !picked.includes(a.text)).map((a) => a.text);
+    const res = await act(() => mining.takeSoundAlikes(add, reject));
+    if (!res) return;
+    alikes = res.candidates;
+    picked = res.candidates.map((a) => a.text);
+    if (app.project?.slug === project.slug) {
+      app.project.confusables = res.project.confusables;
+      app.project.confusables_rejected = res.project.confusables_rejected;
+    }
+    if (add.length) toast(plural(add.length, "{n} sound-alike added. Generate its clips, then train again.", "{n} sound-alikes added. Generate their clips, then train again."));
+    else toast(t("Dismissed; these phrases are not offered again."));
+    refreshGuide(project.slug);
+  }
 
   async function act<T>(fn: () => Promise<T>) {
     busy = true;
@@ -117,14 +153,16 @@
     status.totals = totals;
     if (app.project?.slug === project.slug) app.project.summary.mined = totals.negatives;
     refreshGuide(project.slug);
+    loadAlikes();
   }
 
-  // Where the mining loop stands: scan -> automatic check -> you check the rest -> train again -> scan again.
+  // Where the mining loop stands: scan -> automatic check -> you check the rest -> sound-alikes -> train again -> scan again.
   // $derived so the labels follow the UI language.
   const LOOP = $derived([
     { id: "scan", label: t("Scan"), text: t("the newest model listens to hours of real speech") },
     { id: "check", label: t("Automatic check"), text: t("clear false triggers are labeled for you") },
     { id: "review", label: t("You check the rest"), text: t("listen to what the check flagged") },
+    { id: "alikes", label: t("Sound-alikes"), text: t("what fired becomes words to generate") },
     { id: "train", label: t("Train again"), text: t("only a new model learns from the clips") },
     { id: "rescan", label: t("Scan again"), text: t("fewer triggers = a better model") },
   ]);
@@ -135,6 +173,7 @@
   const stage = $derived(
     running ? (job?.phase === "triage" ? "check" : "scan")
     : openTotal ? "review"
+    : alikes.length ? "alikes"
     : minedNew > 0 ? "train"
     : status?.runs.length ? "rescan"
     : "scan",
@@ -277,7 +316,7 @@
         <div class="neg"><strong class="mono">{status.totals.negatives.toLocaleString(locale())}</strong><span class="dim">{t("false triggers")}</span></div>
         <div><strong class="mono">{status.totals.positives.toLocaleString(locale())}</strong><span class="dim">{t("real wake words")}</span></div>
       </div>
-      {#if minedNew > 0 && !running}
+      {#if minedNew > 0 && !running && !alikes.length}
         <div class="retrain">
           <span><strong>{minedNew.toLocaleString(locale())}</strong> {t("of them are not in any model yet: they only help after the next training run.")}</span>
           <a class="go" href={href.project(project.slug, "train")}>{t("Train again")} <Icon name="next" size={15} /></a>
@@ -323,6 +362,38 @@
       {/if}
     </section>
   </div>
+
+  {#if alikes.length && !running}
+    {@const rest = alikes.length - picked.length}
+    <section class="panel block alikes">
+      <div class="head">
+        <span class="eyebrow">{t("Sound-alikes from false triggers")}</span>
+        <button class="ghost small" onclick={() => (picked = picked.length ? [] : alikes.map((a) => a.text))}>
+          {picked.length ? t("Untick all") : t("Tick all")}
+        </button>
+      </div>
+      <p class="hint">
+        {t("These phrases sat where the model fired and sound close to the wake word. As sound-alikes the voices speak each of them hundreds of times, which teaches the model far more than the few real clips. Phrases that contain the wake word itself are left out, they would contradict the positives.")}
+      </p>
+      <div class="picks">
+        {#each alikes as a (a.text)}
+          <label class="pick" class:on={picked.includes(a.text)} title={t("Phone distance to the wake word: {d} (lower is closer)", { d: a.distance.toFixed(2) })}>
+            <input type="checkbox" value={a.text} bind:group={picked} />
+            <span>{a.text}</span>
+            {#if a.count > 1}<span class="mono faint">{a.count}×</span>{/if}
+          </label>
+        {/each}
+      </div>
+      <div class="actions row">
+        <button class="primary" onclick={takeAlikes} disabled={busy}>
+          {#if !picked.length}{t("Dismiss all {n}", { n: alikes.length })}
+          {:else if !rest}{t("Add all {n} as sound-alikes", { n: alikes.length })}
+          {:else}{t("Add {n}, dismiss {m}", { n: picked.length, m: rest })}{/if}
+        </button>
+        <span class="hint faint">{t("Unticked phrases are not offered again. The list itself is in the wake word step.")}</span>
+      </div>
+    </section>
+  {/if}
 
   {#if status.runs.length}
     <section class="panel block">
@@ -379,7 +450,7 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 8px;
   }
   .loop li {
@@ -666,6 +737,38 @@
   }
   .ok {
     color: var(--cyan);
+  }
+  .picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .pick input {
+    accent-color: var(--cyan);
+    margin: 0;
+  }
+  .pick.on {
+    border-color: var(--cyan);
+    background: rgba(41, 240, 255, 0.08);
+    color: var(--text);
+  }
+  .actions.row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
   }
   @media (max-width: 1050px) {
     .top {

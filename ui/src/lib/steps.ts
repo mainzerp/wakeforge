@@ -36,7 +36,7 @@ export const STEPS = [
   {
     id: "mining", label: "Mining", icon: "radar", available: true, optional: true,
     sub: "Run a trained model over hours of real speech, listen to what triggers it and feed the false triggers back.",
-    how: "Scan with the newest model; an automatic check labels the clear false triggers and leaves the doubtful ones for you. Then train again and scan the new model: repeat until hardly anything triggers.",
+    how: "Scan with the newest model; an automatic check labels the clear false triggers and leaves the doubtful ones for you. Phrases that fired and sound like the wake word can become sound-alikes with one click. Then train again and scan the new model: repeat until hardly anything triggers.",
   },
   {
     id: "export", label: "Export", icon: "download", available: true,

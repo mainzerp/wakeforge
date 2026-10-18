@@ -191,8 +191,12 @@ def sound_alikes(body: SoundAlikeBody) -> dict:
     """Phone distance of the given sound-alikes to the spellings, plus `suggest` new ones (CPU, espeak only)."""
     words = list(dict.fromkeys(w.strip() for w in body.words if w.strip()))
     scored = confusables.score(words, body.phrases, body.language) if words else []
-    mined = confusables.mined_words(projects.project_dir(body.project)) if body.project and body.suggest else []
-    suggestions = confusables.suggest(body.phrases, body.language, body.suggest, words, mined) if body.suggest else []
+    rejected, mined = [], []
+    if body.project and body.suggest:
+        path = projects.project_dir(body.project)
+        rejected = projects.load(path)["confusables_rejected"]
+        mined = confusables.mined_candidates(path, body.phrases, body.language, [*words, *rejected])
+    suggestions = confusables.suggest(body.phrases, body.language, body.suggest, [*words, *rejected], mined) if body.suggest else []
     return {
         "words": [{"text": w, "distance": d, "level": confusables.level(d)} for w, d in zip(words, scored)],
         "suggestions": [{**s, "level": confusables.level(s["distance"])} for s in suggestions],

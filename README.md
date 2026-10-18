@@ -45,7 +45,7 @@ a step bar guides through the workflow, every step stays clickable and shows its
 
 1. Wake word: settings (name, language, TTS spellings, author, website) and sound-alikes (`trainer/tts/confusables.py`):
    words at phone distance 0.35-0.65 from the spellings, suggested from letter edits, voice bank transcripts and the
-   closest words of the project's mined false triggers (those first). The wizard fills them in by itself (remove what
+   closest words of the project's mined false triggers (all of them first, then the others round-robin). The wizard fills them in by itself (remove what
    you do not want), an empty list in step 1 shows suggestions right away, and the guide asks for them before the first
    training and whenever words are not spoken yet.
 2. Synthetic samples: OmniVoice clones a random voice from the voice bank (or designs one from speaker
@@ -98,6 +98,16 @@ so spellings are verified before generating (`POST /api/tts/preview`, no project
    - First scan, thorough run `20261016-132045-thorough` (0.19 false accepts/h on the ambient set): 234 triggers in
      33.8 h of Kartoffelphon, 6.9 false accepts/h on German speech; the check labeled 228 and flagged 6 (all
      harmless: "ja wie", "ja würde", English sentences) in 27 s.
+   - Second scan, thorough run `20261018-091754-thorough` (trained with those 234, last checkpoint): 105 triggers,
+     3.1 false accepts/h; 44 at places already trained on, 57 new. Nearly all are "ja ..." / "... ist" or "scha..."
+     words, i.e. the "dscha" + "wis" parts of the wake word.
+   - Sound-alikes from false triggers (`confusables.mined_candidates`, mining step and guide): the closest word
+     sequences of triggers labeled "not it" that lie in the sound-alike band (0.35-0.65), one per pronunciation, with
+     the number of triggers they came from. Ticked ones join `confusables`, the others go to `confusables_rejected`
+     and are not offered again (as is anything taken off the list in step 1). Phrases that contain the wake word
+     ("ja wirklich" = "ja wi...") are never offered: their clips would contradict the positives. The guide asks for
+     this before "train again", and recommends generating unspoken sound-alikes before training, so one run learns
+     from both.
 6. Export (`trainer/export.py`): pick a finished run and one of its calibration points (cutoff); the UI shows recall,
    false accepts/h on the ambient set and, if the run was mined, on real speech (trigger scores of the scan above
    the chosen cutoff, triggers labeled as the wake word left out; only cutoffs >= the scan's cutoff are known).
@@ -133,7 +143,7 @@ Data layout below `data/`:
 
 | Path | Content |
 |---|---|
-| `projects/<slug>/project.json` | Project settings: `wake_word`, `language`, `tts_phrases`, `confusables` (sound-alike negatives, see `trainer/tts/confusables.py`), `author`, `website`, `borrow_negatives` (other projects whose recordings and/or synthetic clips count as negatives here; referenced, not copied; refused when the wake words are within phone distance 0.35, see `trainer/projects.py`) |
+| `projects/<slug>/project.json` | Project settings: `wake_word`, `language`, `tts_phrases`, `confusables` (sound-alike negatives, see `trainer/tts/confusables.py`), `confusables_rejected` (turned down, not suggested again), `author`, `website`, `borrow_negatives` (other projects whose recordings and/or synthetic clips count as negatives here; referenced, not copied; refused when the wake words are within phone distance 0.35, see `trainer/projects.py`) |
 | `projects/<slug>/recordings/<YYYYMMDD-HHMMSS>/` | Sample Studio takes: `recording.wav`, `clips/`, `clips.json`, `session.json` |
 | `projects/<slug>/samples/positive/`, `.../negative/` | Sorted real clips (16 kHz mono PCM16). A clip's label is the folder holding its copy |
 | `projects/<slug>/generated/tts/` | Synthetic corpus: `corpus.json` index + `shard-*.npz` (int16 clips concatenated, offsets, voice, phrase, speed/design/steps), see `trainer/tts/corpus.py` |

@@ -8,7 +8,9 @@ with the same voice bank (trainer.tts.omni, mode "confusable"). Suggestions come
   words   real words and word pairs from the voice bank transcripts ("Paris", "schau mal") - natural for the TTS and
           the kind of thing that triggers a model in a real living room
   mined   the closest words in the transcripts of real false triggers found by mining (trainer/mining/triage.py
-          stores them per trigger): proven confusers of this very model, so they come first
+          stores them per trigger): proven confusers of this very model, so they come first; the mining step also
+          offers them directly (mined_candidates), and phrases the user turned down stay out
+          (project.json "confusables_rejected")
 
 Every candidate is scored with the espeak phone distance to the closest spelling (trainer.tts.phonetic). Only the
 band CONFLICT_MAX < distance <= MAX_DISTANCE is kept: closer would be the wake word itself (contradicting labels),
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
+from pathlib import Path
 
 from trainer.tts import phonetic
 from trainer.tts.voices import load_bank
@@ -120,6 +123,12 @@ def score(texts: list[str], spellings: list[str], language: str) -> list[float]:
     return [round(min(closeness(p, t) for t in targets), 3) if p else 1.0 for p in phones]
 
 
+@lru_cache(maxsize=64)
+def cached_score(texts: tuple[str, ...], spellings: tuple[str, ...], language: str) -> tuple[float, ...]:
+    """score() for callers that repeat the same question, like the guide on every poll."""
+    return tuple(score(list(texts), list(spellings), language))
+
+
 def similar_length(phones: tuple[str, ...], targets: list[tuple[str, ...]]) -> bool:
     return any(0.6 * len(t) <= len(phones) <= 1.6 * len(t) for t in targets)
 
@@ -149,32 +158,51 @@ def ranked(spellings: tuple[str, ...], language: str) -> dict[str, list[tuple[st
     return {k: sorted(v, key=lambda x: (x[1], len(x[0]))) for k, v in out.items()}
 
 
-def mined_words(project) -> list[str]:
-    """Closest word sequences of a project's mined false triggers (not those labeled as the wake word)."""
+def mined_phrases(project: Path) -> dict[str, int]:
+    """Closest word sequences of a project's false triggers -> number of triggers they came from. Counted are triggers
+    labeled negative (by a person or the check) and unlabeled ones the check found already labeled in another scan;
+    a person's "positive" or "skip" keeps a trigger out."""
     from trainer.mining import store
 
-    out: dict[str, None] = {}
+    out: dict[str, int] = {}
     for scan in store.mine_dirs(project):
         labels = store.labels(scan)
         for n, check in store.triage(scan).items():
             words = (check.get("text_words") or "").strip()
-            if words and labels.get(n) != "positive" and check.get("verdict") != "review":
-                out[words[:1].upper() + words[1:]] = None
-    return list(out)
+            label = labels.get(n)
+            if words and (label == "negative" or (label is None and check.get("verdict") == "duplicate")):
+                key = words[:1].upper() + words[1:]
+                out[key] = out.get(key, 0) + 1
+    return out
 
 
-def suggest(spellings: list[str], language: str, n: int = 24, exclude: list[str] = (), mined: list[str] = ()) -> list[dict]:
-    """n diverse sound-alikes, taken round-robin from mined, real words and each kind of letter edit, closest first."""
+def mined_candidates(project: Path, spellings: list[str], language: str, exclude: list[str] = ()) -> list[dict]:
+    """Mined phrases worth speaking as sound-alikes, closest first: inside the useful band, not listed or rejected yet
+    (exclude), one per pronunciation ("Ja das" and "Ja dass" are one)."""
+    counts = mined_phrases(project)
+    skip = {w.lower() for w in [*exclude, *spellings]}
+    texts = [t for t in counts if t.lower() not in skip]
+    if not texts:
+        return []
+    seen = set(phonetic.phrases_phones([*exclude, *spellings], language))
+    out = []
+    for text, d in sorted(zip(texts, cached_score(tuple(texts), tuple(spellings), language)), key=lambda x: (x[1], -counts[x[0]], len(x[0]))):
+        phones = phonetic.phrase_phones(text, language)
+        if phonetic.CONFLICT_MAX < d <= MAX_DISTANCE and phones not in seen:
+            seen.add(phones)
+            out.append({"text": text, "distance": d, "count": counts[text]})
+    return out
+
+
+def suggest(spellings: list[str], language: str, n: int = 24, exclude: list[str] = (), mined: list[dict] = ()) -> list[dict]:
+    """n sound-alikes: mined phrases first (mined_candidates, proven confusers of this very model), then real words and
+    each kind of letter edit round-robin, one per consonant frame so the list stays diverse."""
+    out = [{"text": m["text"], "distance": m["distance"], "kind": "mined"} for m in mined[:n]]
     pools = {k: list(v) for k, v in ranked(tuple(spellings), language).items()}
-    if mined:
-        texts = [m for m in mined if m.lower() not in {s.lower() for s in spellings}]
-        hits = [(t, d) for t, d in zip(texts, score(texts, list(spellings), language)) if phonetic.CONFLICT_MAX < d <= MAX_DISTANCE]
-        if hits:
-            pools["mined"] = sorted(hits, key=lambda x: (x[1], len(x[0])))
-    taken = {e.lower() for e in exclude}
-    seen = {skeleton(p) for p in phonetic.phrases_phones(list(exclude) + list(spellings), language)}
-    order = [k for k in ("mined", "word", "onset", "inner", "vowel", "ending") if k in pools]
-    out: list[dict] = []
+    chosen = [o["text"] for o in out]
+    taken = {e.lower() for e in [*exclude, *chosen]}
+    seen = {skeleton(p) for p in phonetic.phrases_phones([*exclude, *spellings, *chosen], language)}
+    order = [k for k in ("word", "onset", "inner", "vowel", "ending") if k in pools]
     while len(out) < n and any(pools[k] for k in order):
         for kind in order:
             while pools[kind] and len(out) < n:

@@ -38,6 +38,8 @@ export interface ProjectSettings {
   language: string;
   tts_phrases: string[];
   confusables: string[];
+  /** sound-alikes turned down or taken off the list: mining does not offer them again */
+  confusables_rejected?: string[];
   author: string;
   website: string;
 }
@@ -403,6 +405,14 @@ export interface MiningJob extends Job {
   total_s?: number;
   hits?: number;
   triage?: { done: number; total: number; negative?: number; review?: number; duplicate?: number };
+}
+
+/** A phrase from the transcripts of false triggers that would make a good sound-alike */
+export interface MinedSoundAlike {
+  text: string;
+  distance: number;
+  /** number of false triggers it came from */
+  count: number;
 }
 
 export interface MiningStatus {
