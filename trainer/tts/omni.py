@@ -86,13 +86,32 @@ class Synth:
         self.checker = PhoneChecker(language, phrases) if phrases else None
 
     def generate(self, texts: list[str], speeds: list[float], prompts=None, instructs=None) -> list[np.ndarray]:
-        wavs = self.model.generate(text=texts, language=self.language, speed=speeds, voice_clone_prompt=prompts,
-                                   instruct=instructs, generation_config=self.config)
+        try:
+            wavs = self._generate(texts, speeds, prompts, instructs)
+        except ValueError as e:
+            # A clip that comes out as pure silence is empty after OmniVoice's silence removal, and the peak
+            # normalization of voice-design clips then fails the whole batch. Redo it clip by clip; an empty clip
+            # is dropped by the caller as too short.
+            if "zero-size array" not in str(e):
+                raise
+            wavs = []
+            for i in range(len(texts)):
+                try:
+                    wavs += self._generate(texts[i:i + 1], speeds[i:i + 1], prompts and prompts[i:i + 1],
+                                           instructs and instructs[i:i + 1])
+                except ValueError as e:
+                    if "zero-size array" not in str(e):
+                        raise
+                    wavs.append(np.zeros(0, dtype=np.float32))
         out = []
         for w in wavs:
             w = np.asarray(w, dtype=np.float32).squeeze()
-            out.append(corpus.trim(resample_poly(w, self.up, self.down).astype(np.float32)))
+            out.append(corpus.trim(resample_poly(w, self.up, self.down).astype(np.float32)) if w.size else w.reshape(0))
         return out
+
+    def _generate(self, texts: list[str], speeds: list[float], prompts, instructs) -> list:
+        return self.model.generate(text=texts, language=self.language, speed=speeds, voice_clone_prompt=prompts,
+                                   instruct=instructs, generation_config=self.config)
 
     def score(self, clips: list[np.ndarray]) -> list[Score]:
         if self.checker is None:
