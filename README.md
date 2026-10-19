@@ -87,7 +87,10 @@ a step bar guides through the workflow, every step stays clickable and shows its
 
 The pronunciation check (2 voices per spelling, phones + Δ) lives on the wake word page and in the wizard,
 so spellings are verified before generating (`POST /api/tts/preview`, no project needed).
-3. Own recordings: Sample Studio (optional, recommended)
+3. Own recordings: Sample Studio (optional, recommended). Record takes in the browser or upload audio files (button or
+   drag and drop; the browser decodes any format it plays and sends a mono WAV, one take per file, its name kept in
+   `session.json`). Takes up to 3 s become one clip as a whole: on a single word the noise-floor splitter dropped or
+   clipped 4 of 10 clips. Longer takes are split as before.
 4. Training (`trainer/train/`): one background job per run with live phases.
    - Sources (`sources.py`): synthetic positives (weight 2), own positives (3), sound-alikes (6, penalty 1.25),
      own negatives (8, 1.25), mined false triggers (8, 1.25), mined real wake words (3), borrowed projects (4),
@@ -180,7 +183,7 @@ Data layout below `data/`:
 | Path | Content |
 |---|---|
 | `projects/<slug>/project.json` | Project settings: `wake_word`, `language`, `tts_phrases`, `confusables` (sound-alike negatives, see `trainer/tts/confusables.py`), `confusables_rejected` (turned down, not suggested again), `author`, `website`, `borrow_negatives` (other projects whose recordings and/or synthetic clips count as negatives here; referenced, not copied; refused when the wake words are within phone distance 0.35, see `trainer/projects.py`) |
-| `projects/<slug>/recordings/<YYYYMMDD-HHMMSS>/` | Sample Studio takes: `recording.wav`, `clips/`, `clips.json`, `session.json` |
+| `projects/<slug>/recordings/<YYYYMMDD-HHMMSS>/` | Sample Studio takes: `recording.wav`, `clips/`, `clips.json`, `session.json` (prefix, uploaded file name) |
 | `projects/<slug>/samples/positive/`, `.../negative/` | Sorted real clips (16 kHz mono PCM16). A clip's label is the folder holding its copy |
 | `projects/<slug>/generated/tts/` | Synthetic corpus: `corpus.json` index + `shard-*.npz` (int16 clips concatenated, offsets, voice, phrase, speed/design/steps), see `trainer/tts/corpus.py` |
 | `projects/<slug>/generated/tts-negative/` | Negative candidates: TTS clips that came out clearly different from every spelling (same format) |

@@ -92,6 +92,22 @@ export function encodeWav(chunks: Float32Array[], length: number, rate: number):
   return new Blob([buf], { type: "audio/wav" });
 }
 
+/** Decode an audio file in any format the browser plays and mix it down to a mono WAV (the server only reads WAV). */
+export async function fileToWav(file: File): Promise<Blob> {
+  const ctx = new AudioContext();
+  try {
+    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+    const mono = new Float32Array(buf.length);
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const ch = buf.getChannelData(c);
+      for (let i = 0; i < ch.length; i++) mono[i] += ch[i] / buf.numberOfChannels;
+    }
+    return encodeWav([mono], mono.length, buf.sampleRate);
+  } finally {
+    await ctx.close();
+  }
+}
+
 export interface Peaks {
   values: Float32Array;
   duration: number;

@@ -20,6 +20,9 @@ HOP_S = 0.01
 PREFIX_MAX_LEN = 32
 UMLAUTS = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
 CLIP_SUFFIX_RE = re.compile(r"(\d{8}-\d{6})_(\d{3})\.wav$")
+# A take this short is one clip as a whole: the noise floor of a single word cannot be estimated (the splitter
+# dropped or clipped 4 of 10 one-word files), and uploaded files are often exactly that.
+SINGLE_CLIP_MAX_S = 3.0
 
 
 @dataclass
@@ -47,8 +50,15 @@ def load_prefix(session_dir: Path) -> str:
     return json.loads(path.read_text(encoding="utf-8")).get("prefix", "") if path.is_file() else ""
 
 
+def load_session(session_dir: Path) -> dict:
+    path = session_dir / "session.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+
 def save_prefix(session_dir: Path, prefix: str) -> None:
-    (session_dir / "session.json").write_text(json.dumps({"prefix": prefix}, indent=2), encoding="utf-8")
+    """Store the prefix, keeping the other keys of session.json (the uploaded file's name)."""
+    data = {**load_session(session_dir), "prefix": prefix}
+    (session_dir / "session.json").write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def rename_prefix(session_dir: Path, prefix: str) -> dict[str, str]:
@@ -121,14 +131,14 @@ def split_recording(wav_path: Path, p: SplitParams, prefix: str | None = None) -
         audio = resample_poly(audio, TARGET_RATE // g, rate // g).astype(np.float32)
         rate = TARGET_RATE
 
-    segments, rejected = find_segments(audio, rate, p)
+    total = len(audio) / rate
+    segments, rejected = ([(0.0, total)], 0) if total <= SINGLE_CLIP_MAX_S else find_segments(audio, rate, p)
     clips_dir = wav_path.parent / "clips"
     if clips_dir.exists():
         shutil.rmtree(clips_dir)
     clips_dir.mkdir()
 
     session = wav_path.parent.name
-    total = len(audio) / rate
     clips = []
     for i, (start, end) in enumerate(segments):
         prev_end = segments[i - 1][1] if i else 0.0

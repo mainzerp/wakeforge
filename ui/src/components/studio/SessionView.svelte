@@ -234,6 +234,7 @@
       <div>
         <span class="eyebrow">{t("Take")}</span>
         <h2 class="mono">{formatSession(session.name)}</h2>
+        {#if session.source}<span class="source faint">{t("Uploaded file: {file}", { file: session.source })}</span>{/if}
       </div>
       <div class="chips">
         <span class="chip mono">{session.duration}s</span>
@@ -304,6 +305,11 @@
 </div>
 
 <style>
+  .source {
+    display: block;
+    font-size: 12.5px;
+    margin-top: 2px;
+  }
   .view {
     display: flex;
     flex-direction: column;

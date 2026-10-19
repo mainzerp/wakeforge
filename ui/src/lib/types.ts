@@ -22,6 +22,8 @@ export interface Clip {
 export interface Session {
   name: string;
   prefix: string;
+  /** name of the uploaded file, empty for a recorded take */
+  source?: string;
   duration: number;
   rejected: number;
   params: SplitParams;

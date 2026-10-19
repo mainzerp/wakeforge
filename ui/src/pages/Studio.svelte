@@ -57,6 +57,7 @@
       <div class="panel empty">
         <h2>{t("No takes yet")}</h2>
         <p class="dim">{t("Hit record, say the wake word a few dozen times with short pauses, then stop. Clips appear here, ready to sort.")}</p>
+        <p class="dim">{t("You can also upload audio files, e.g. voice memos of other people saying the wake word.")}</p>
       </div>
     {/if}
   </section>

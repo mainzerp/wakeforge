@@ -148,14 +148,16 @@ def sessions(slug: str) -> dict:
 
 
 @studio_api.post("/upload")
-async def upload(slug: str, request: Request, x_split_params: str = Header("{}"), x_prefix: str = Header("")) -> dict:
+async def upload(slug: str, request: Request, x_split_params: str = Header("{}"), x_prefix: str = Header(""),
+                 x_source: str = Header("")) -> dict:
+    """A recorded take or an uploaded audio file, as WAV (the browser decodes other formats); X-Source is the file name."""
     studio = studio_for(slug)
     body = await request.body()
     if len(body) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "upload too large")
     params = store.parse_params(json.loads(x_split_params or "{}"))
     with store.LOCK:
-        result = with_counts(studio, studio.new_session(body, params, unquote(x_prefix)))
+        result = with_counts(studio, studio.new_session(body, params, unquote(x_prefix), unquote(x_source)))
         projects.touch(projects.project_dir(slug))
         return result
 

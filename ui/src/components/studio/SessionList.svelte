@@ -24,6 +24,7 @@
             <span class="when mono">{formatSession(s.name)}</span>
             {#if s.prefix}<span class="chip">{s.prefix}</span>{/if}
           </div>
+          {#if s.source}<div class="source faint" title={s.source}>{s.source}</div>{/if}
           <div class="bar">
             <span class="p" style:width="{(n.positive / total) * 100}%"></span>
             <span class="n" style:width="{(n.negative / total) * 100}%"></span>
@@ -46,6 +47,13 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
+  }
+  .source {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
   }
   .none {
     margin: 6px 0;

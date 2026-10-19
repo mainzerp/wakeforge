@@ -3,7 +3,7 @@
   import Scope from "../Scope.svelte";
   import { studio } from "../../lib/api";
   import { plural, t } from "../../lib/i18n.svelte";
-  import { Recorder, dbToPercent } from "../../lib/audio";
+  import { Recorder, dbToPercent, fileToWav } from "../../lib/audio";
   import { setCounts, toast, toastError } from "../../lib/state.svelte";
   import type { Session, SplitParams } from "../../lib/types";
 
@@ -28,6 +28,10 @@
   let deviceId = $state(localStorage.getItem("deviceId") ?? "");
   let prefix = $state(localStorage.getItem("prefix") ?? "");
   let showParams = $state(false);
+  // Uploading files: position in the queue, and whether files are dragged over the panel
+  let uploading = $state<{ done: number; total: number } | null>(null);
+  let dragging = $state(false);
+  let picker: HTMLInputElement;
 
   $effect(() => localStorage.setItem("prefix", prefix));
   $effect(() => localStorage.setItem("deviceId", deviceId));
@@ -76,11 +80,41 @@
     }
   }
 
+  async function uploadFiles(files: File[]) {
+    if (!files.length || busy || rec) return;
+    busy = true;
+    uploading = { done: 0, total: files.length };
+    let clips = 0, ok = 0;
+    for (const file of files) {
+      try {
+        const wav = await fileToWav(file);
+        const res = await studio.upload(wav, $state.snapshot(params), prefix, file.name);
+        setCounts(res.counts);
+        onuploaded(res.session);
+        clips += res.session.clips.length;
+        ok++;
+      } catch (e) {
+        toastError(t("{file}: could not be read ({error})", { file: file.name, error: e instanceof Error ? e.message : String(e) }));
+      }
+      uploading.done++;
+    }
+    if (ok) toast(plural(ok, "{n} file uploaded, {clips} clips to sort.", "{n} files uploaded, {clips} clips to sort.", { clips }));
+    uploading = null;
+    busy = false;
+  }
+
+  function ondrop(e: DragEvent) {
+    e.preventDefault();
+    dragging = false;
+    uploadFiles([...(e.dataTransfer?.files ?? [])].filter((f) => f.type.startsWith("audio/") || /\.(wav|mp3|m4a|aac|ogg|oga|opus|flac|webm)$/i.test(f.name)));
+  }
+
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const lit = $derived(Math.round((dbToPercent(level) / 100) * SEGMENTS));
 </script>
 
-<div class="panel rec" class:live={!!rec}>
+<div class="panel rec" class:live={!!rec} class:drop={dragging} role="region" aria-label={t("Recorder")}
+  ondragover={(e) => { e.preventDefault(); if (!rec) dragging = true; }} ondragleave={() => (dragging = false)} {ondrop}>
   <div class="head">
     <span class="eyebrow">{t("Recorder")}</span>
     <span class="chip" class:pos={!!rec}><span class="dot" class:blink={!!rec}></span>{rec ? t("LIVE") : t("IDLE")}</span>
@@ -93,7 +127,9 @@
     </button>
     <div class="readout">
       <div class="time mono">{fmt(elapsed)}</div>
-      <div class="db mono dim">{rec ? `${level.toFixed(0)} dBFS` : busy ? t("uploading…") : t("ready")}</div>
+      <div class="db mono dim">
+        {rec ? `${level.toFixed(0)} dBFS` : uploading ? t("file {n} of {total}…", { n: Math.min(uploading.done + 1, uploading.total), total: uploading.total }) : busy ? t("uploading…") : t("ready")}
+      </div>
     </div>
   </div>
 
@@ -103,6 +139,13 @@
     {#each Array(SEGMENTS) as _, i (i)}
       <span class:on={i < lit} class:warm={i >= SEGMENTS - 6} class:hot={i >= SEGMENTS - 2}></span>
     {/each}
+  </div>
+
+  <div class="upload">
+    <input bind:this={picker} type="file" multiple hidden accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.opus,.flac,.webm"
+      onchange={(e) => { const input = e.currentTarget; uploadFiles([...(input.files ?? [])]); input.value = ""; }} />
+    <button class="small" onclick={() => picker.click()} disabled={busy || !!rec}><Icon name="upload" size={15} /> {t("Upload audio files")}</button>
+    <span class="hint faint">{t("or drop them here. Files up to 3 s become one clip, longer ones are split like a recording.")}</span>
   </div>
 
   <div class="fields">
@@ -240,6 +283,25 @@
   .meter span.on.hot {
     background: var(--danger);
     box-shadow: 0 0 8px rgba(255, 79, 123, 0.8);
+  }
+  .rec.drop {
+    border-color: var(--cyan);
+    box-shadow: 0 0 22px -8px rgba(41, 240, 255, 0.9);
+  }
+  .upload {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .upload button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .upload .hint {
+    font-size: 12px;
+    line-height: 1.45;
   }
   .fields {
     display: grid;

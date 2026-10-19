@@ -17,7 +17,7 @@ from pathlib import Path
 
 import soundfile as sf
 
-from trainer.studio.splitter import SplitParams, load_prefix, rename_prefix, split_recording
+from trainer.studio.splitter import SplitParams, load_prefix, load_session, rename_prefix, split_recording
 
 SESSION_RE = re.compile(r"^\d{8}-\d{6}$")
 CLIP_RE = re.compile(r"^(?:[A-Za-z0-9-]{1,32}_)?\d{8}-\d{6}_\d{3}\.wav$")
@@ -95,6 +95,7 @@ class Studio:
         meta["clips"] = [{**c, "label": self.clip_label(c["name"])} for c in meta["clips"] if (clips_dir / c["name"]).is_file()]
         meta["name"] = path.name
         meta["prefix"] = load_prefix(path)
+        meta["source"] = load_session(path).get("source", "")
         meta["duration"] = round(sf.info(path / "recording.wav").duration, 1)
         return meta
 
@@ -110,7 +111,8 @@ class Studio:
     def sample_counts(self) -> dict:
         return {label: len(list(target.glob("*.wav"))) if target.is_dir() else 0 for label, target in self.targets.items()}
 
-    def new_session(self, wav: bytes, params: SplitParams, prefix: str) -> dict:
+    def new_session(self, wav: bytes, params: SplitParams, prefix: str, source: str = "") -> dict:
+        """A recorded take, or an uploaded file (source: its name, shown in the take list)."""
         self.recordings.mkdir(parents=True, exist_ok=True)
         while True:
             path = self.recordings / datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -120,6 +122,8 @@ class Studio:
             except FileExistsError:
                 time.sleep(1)
         (path / "recording.wav").write_bytes(wav)
+        if source:
+            (path / "session.json").write_text(json.dumps({"source": source[:200]}, ensure_ascii=False), encoding="utf-8")
         return self.split(path, params, prefix)
 
     def split(self, path: Path, params: SplitParams, prefix: str | None = None) -> dict:

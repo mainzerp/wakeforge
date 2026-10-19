@@ -26,7 +26,7 @@ export const STEPS = [
   {
     id: "record", label: "Own recordings", icon: "mic", available: true, optional: true,
     sub: "Record takes, split them, sort every clip.",
-    how: "Optional, but real voices help most: record a take in which you (and others) say the wake word a few times with pauses, it is split into clips automatically. Mark each clip Pos (the wake word) or Neg (anything else, e.g. similar words). New clips count from the next training run.",
+    how: "Optional, but real voices help most: record a take in which you (and others) say the wake word a few times with pauses, it is split into clips automatically. Audio files (voice memos, any format the browser plays) can be uploaded too. Mark each clip Pos (the wake word) or Neg (anything else, e.g. similar words). New clips count from the next training run.",
   },
   {
     id: "train", label: "Training", icon: "pulse", available: true,

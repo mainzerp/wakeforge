@@ -127,10 +127,15 @@ const base = () => `${projectBase()}/studio`;
 
 export const studio = {
   sessions: () => request<{ sessions: Session[]; counts: Counts }>(`${base()}/sessions`),
-  upload: (wav: Blob, params: SplitParams, prefix: string) =>
+  upload: (wav: Blob, params: SplitParams, prefix: string, source = "") =>
     request<SessionResult>(`${base()}/upload`, {
       method: "POST",
-      headers: { "Content-Type": "audio/wav", "X-Split-Params": JSON.stringify(params), "X-Prefix": encodeURIComponent(prefix) },
+      headers: {
+        "Content-Type": "audio/wav",
+        "X-Split-Params": JSON.stringify(params),
+        "X-Prefix": encodeURIComponent(prefix),
+        "X-Source": encodeURIComponent(source),
+      },
       body: wav,
     }),
   split: (session: string, params: SplitParams) => post<SessionResult>(`${base()}/split`, { session, params }),

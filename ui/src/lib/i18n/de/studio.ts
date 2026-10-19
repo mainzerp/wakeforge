@@ -89,4 +89,12 @@ export default {
   "Projects whose wake word sounds like": "Projekte mit einem Wake Word, das wie",
   "cannot be borrowed: their clips would teach the model that its own wake word is a negative.": "klingt, lassen sich nicht übernehmen: Ihre Clips würden dem Modell beibringen, dass sein eigenes Wake Word ein Negativ ist.",
   "audio unavailable": "Audio nicht verfügbar",
+  "{file}: could not be read ({error})": "{file}: konnte nicht gelesen werden ({error})",
+  "file {n} of {total}…": "Datei {n} von {total}…",
+  "Upload audio files": "Audiodateien hochladen",
+  "or drop them here. Files up to 3 s become one clip, longer ones are split like a recording.": "oder hierher ziehen. Dateien bis 3 s werden ein Clip, längere werden wie eine Aufnahme geteilt.",
+  "{n} file uploaded, {clips} clips to sort.": "{n} Datei hochgeladen, {clips} Clips zum Sortieren.",
+  "{n} files uploaded, {clips} clips to sort.": "{n} Dateien hochgeladen, {clips} Clips zum Sortieren.",
+  "Uploaded file: {file}": "Hochgeladene Datei: {file}",
+  "You can also upload audio files, e.g. voice memos of other people saying the wake word.": "Du kannst auch Audiodateien hochladen, z. B. Sprachmemos von anderen, die das Wake Word sagen.",
 } satisfies Record<string, string>;
