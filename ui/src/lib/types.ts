@@ -139,6 +139,8 @@ export interface GenerateStatus {
   job: Job | null;
   confusable_job: Job | null;
   active: Job | null;
+  /** recommended minimum clip counts (trainer/recipe.py) */
+  targets: { positives: number; sound_alikes: number };
 }
 
 export interface TrainSource {
@@ -226,6 +228,8 @@ export interface TrainJob extends Job {
 export interface TrainStatus {
   sources: TrainSource[];
   problems: string[];
+  /** amounts below the recommendation: template + params, shown but not blocking */
+  advice: { text: string; params: Record<string, number> }[];
   profiles: Record<string, { label: string; steps: number; hint: string }>;
   runs: TrainRun[];
   job: TrainJob | null;
@@ -420,6 +424,9 @@ export interface MiningStatus {
   models: MiningModel[];
   runs: MiningRun[];
   totals: { negatives: number; positives: number };
+  /** training runs scanned so far, and after how many rounds mining hardly helps (trainer/recipe.py) */
+  rounds: number;
+  recommended_rounds: number;
   job: MiningJob | null;
   active: Job | null;
 }

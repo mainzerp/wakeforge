@@ -176,6 +176,9 @@
       {#each status.problems as p (p)}
         <p class="hint err">{t(p)}</p>
       {/each}
+      {#each status.advice as a (a.text)}
+        <p class="hint warn">{t(a.text, a.params)} <a href={href.project(project.slug, "generate")}>{t("Open the samples step")}</a></p>
+      {/each}
       {#if blocker}
         <p class="hint warn">{t("The GPU is busy: {kind} job of \"{project}\" is running.", { kind: blocker.kind, project: blocker.project })}</p>
       {/if}
@@ -445,6 +448,9 @@
   }
   .hint.err {
     color: var(--danger);
+  }
+  .hint a {
+    color: var(--cyan);
   }
   .small {
     font-size: 12.5px;

@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from trainer import jobs, projects
+from trainer import jobs, projects, recipe
 from trainer.mining import audio, store
 from trainer.server.generate_api import py_omni
 from trainer.server.train_api import py_train, read_run, run_dir, run_dirs
@@ -57,6 +57,8 @@ def status(slug: str) -> dict:
         "models": models(path),
         "runs": [store.summary(d) for d in store.mine_dirs(path)],
         "totals": store.totals(path),
+        "rounds": store.rounds(path),
+        "recommended_rounds": recipe.MINING_ROUNDS,
         # A scan job checks its triggers itself; a separate check job runs for scans made before (newest wins).
         "job": max(filter(None, (jobs.latest(path, "mining"), jobs.latest(path, "triage"))), key=lambda j: j["id"], default=None),
         "active": jobs.active(),

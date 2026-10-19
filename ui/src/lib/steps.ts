@@ -21,7 +21,7 @@ export const STEPS = [
   {
     id: "generate", label: "Synthetic samples", icon: "sparkles", available: true,
     sub: "Hundreds of cloned German voices (OmniVoice) saying your wake word, checked phonetically.",
-    how: "Generate the wake word clips first (20,000 is a good default, about 1.5 hours), then the sound-alike negatives below. Both run in the background; listen to a few clips to make sure they sound right.",
+    how: "Generate at least 25,000 wake word clips first (about 1.5-2 hours), then at least 5,000 sound-alike clips below. Both run in the background; listen to a few clips to make sure they sound right.",
   },
   {
     id: "record", label: "Own recordings", icon: "mic", available: true, optional: true,
@@ -36,7 +36,7 @@ export const STEPS = [
   {
     id: "mining", label: "Mining", icon: "radar", available: true, optional: true,
     sub: "Run a trained model over hours of real speech, listen to what triggers it and feed the false triggers back.",
-    how: "Scan with the newest model; an automatic check labels the clear false triggers and leaves the doubtful ones for you. Phrases that fired and sound like the wake word can become sound-alikes with one click. Then train again and scan the new model: repeat until hardly anything triggers.",
+    how: "Scan with the newest model; an automatic check labels the clear false triggers and leaves the doubtful ones for you. Phrases that fired and sound like the wake word can become sound-alikes with one click. Then train again and scan the new model once more: one or two rounds are enough, after that it hardly improves.",
   },
   {
     id: "export", label: "Export", icon: "download", available: true,

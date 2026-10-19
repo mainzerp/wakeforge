@@ -156,6 +156,13 @@ a first model, triggers to check, a model older than its training data (clip cou
 need attention (e.g. Training "train again"), the footer and the project list follow it, and opening a project jumps
 to it. Each step page starts with a short "how" text (`ui/src/lib/steps.ts`).
 
+Recommended amounts (`trainer/recipe.py`, from the first model that held up on the device, `dscharwis` 2026-10-18):
+at least 25,000 synthetic positives and 5,000 sound-alike clips, then one or two mining rounds (scan, review, train
+again). The third scan of that model found only 2 new false triggers in 33.8 h of speech, so more rounds hardly help.
+The generate and train steps warn below the amounts (never blocking, a quick fast run stays possible), the guide asks
+to top them up before training, and after two rounds it stops asking for scans and for retraining on mined clips
+alone; it recommends exporting and testing on the device instead. The mining page shows the round.
+
 ## Layout
 
 | Path | Purpose |

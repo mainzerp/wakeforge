@@ -89,4 +89,6 @@ export default {
   "done ≈ {time}": "fertig ≈ {time}",
   "{state} after {time}": "{state} nach {time}",
   "No progress update for {time}. The worker may hang; check the log.": "Seit {time} kein Fortschritt. Der Worker hängt evtl.; schau ins Log.",
+  "{n} clips so far: models hold up from {min} on (fewer missed more on the device).": "Bisher {n} Clips: Modelle halten ab {min} (mit weniger haben sie auf dem Gerät öfter danebengelegen).",
+  "{n} clips so far: use at least {min}, so the model learns to ignore these words.": "Bisher {n} Clips: Nimm mindestens {min}, damit das Modell diese Wörter ignorieren lernt.",
 } satisfies Record<string, string>;

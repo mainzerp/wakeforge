@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from trainer import jobs, projects
-from trainer.train.sources import check, project_sources
+from trainer.train.sources import advice, check, project_sources
 
 router = APIRouter(prefix="/api/projects/{slug}/train")
 RUN_RE = re.compile(r"^\d{8}-\d{6}-[a-z]+$")
@@ -76,6 +76,7 @@ def status(slug: str) -> dict:
     return {
         "sources": [s.summary() for s in sources],
         "problems": check(sources),
+        "advice": advice(sources),
         "profiles": PROFILES,
         "runs": [read_run(d) for d in run_dirs(path)],
         "job": job,

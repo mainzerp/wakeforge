@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
-from trainer import projects
+from trainer import projects, recipe
 from trainer.paths import DATASETS, FEATURE_CACHE, PROJECTS
 from trainer.tts import corpus
 
@@ -147,6 +147,20 @@ def project_sources(path: Path, keys: bool = True) -> list[Source]:
     for s in out:
         s.clips = sum(i.clips for i in s.items)
     return [s for s in out if s.clips] + shared_sources()
+
+
+def advice(sources: list[Source]) -> list[dict]:
+    """Amounts below what a model needs to hold up (trainer/recipe.py): shown before training, never blocking,
+    so a quick fast run stays possible. Templates with params, translated by the UI."""
+    clips = {s.id: s.clips for s in sources}
+    out = []
+    if clips.get("synthetic", 0) < recipe.MIN_POSITIVES:
+        out.append({"text": "{n} synthetic samples: models hold up from {min} on.",
+                    "params": {"n": clips.get("synthetic", 0), "min": recipe.MIN_POSITIVES}})
+    if clips.get("sound-alikes", 0) < recipe.MIN_SOUND_ALIKES:
+        out.append({"text": "{n} sound-alike clips: {min} or more teach the model to ignore similar words.",
+                    "params": {"n": clips.get("sound-alikes", 0), "min": recipe.MIN_SOUND_ALIKES}})
+    return out
 
 
 def check(sources: list[Source]) -> list[str]:

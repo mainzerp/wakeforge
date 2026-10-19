@@ -164,12 +164,18 @@
     { id: "review", label: t("You check the rest"), text: t("listen to what the check flagged") },
     { id: "alikes", label: t("Sound-alikes"), text: t("what fired becomes words to generate") },
     { id: "train", label: t("Train again"), text: t("only a new model learns from the clips") },
-    { id: "rescan", label: t("Scan again"), text: t("fewer triggers = a better model") },
+    { id: "rescan", label: t("Scan again"), text: t("1-2 rounds are enough, then it hardly improves") },
   ]);
   const minedNew = $derived(
     guide.slug === project.slug ? guide.data?.changes.filter((c) => c.id.startsWith("mined-")).reduce((a, c) => a + c.now - c.before, 0) ?? 0 : 0,
   );
   const openTotal = $derived(status?.runs.reduce((a, r) => a + r.counts.open, 0) ?? 0);
+  // After the recommended rounds further scans find hardly anything new: the loop ends, the device test begins
+  const miningDone = $derived(!!status && status.rounds >= status.recommended_rounds);
+  // A round starts with the scan of a new model and ends with training again
+  const round = $derived(
+    status ? status.rounds + (status.runs.some((r) => r.run === status!.models[0]?.run && r.state === "done") ? 0 : 1) : 1,
+  );
   const stage = $derived(
     running ? (job?.phase === "triage" ? "check" : "scan")
     : openTotal ? "review"
@@ -217,6 +223,10 @@
 
 {#if status}
 <div class="page">
+  <p class="rounds hint">
+    {#if miningDone}{plural(status.rounds, "{n} round done:", "{n} rounds done:")}{:else}{t("Round {n} of {max}:", { n: round, max: status.recommended_rounds })}{/if}
+    {t("one or two rounds of scanning, reviewing and training again make a model robust; after that it hardly improves.")}
+  </p>
   <ol class="loop" aria-label={t("How mining works")}>
     {#each LOOP as l, i (l.id)}
       <li class:now={stage === l.id} class:past={LOOP.findIndex((x) => x.id === stage) > i}>
@@ -316,7 +326,12 @@
         <div class="neg"><strong class="mono">{status.totals.negatives.toLocaleString(locale())}</strong><span class="dim">{t("false triggers")}</span></div>
         <div><strong class="mono">{status.totals.positives.toLocaleString(locale())}</strong><span class="dim">{t("real wake words")}</span></div>
       </div>
-      {#if minedNew > 0 && !running && !alikes.length}
+      {#if miningDone && !running && !openTotal}
+        <div class="retrain done">
+          <span>{plural(status.rounds, "{n} mining round done: further rounds hardly improve the model. Export it and test it on the device; scan your own audio only if it fires on something specific.", "{n} mining rounds done: further rounds hardly improve the model. Export it and test it on the device; scan your own audio only if it fires on something specific.")}</span>
+          <a class="go" href={href.project(project.slug, "export")}>{t("Export")} <Icon name="next" size={15} /></a>
+        </div>
+      {:else if minedNew > 0 && !running && !alikes.length}
         <div class="retrain">
           <span><strong>{minedNew.toLocaleString(locale())}</strong> {t("of them are not in any model yet: they only help after the next training run.")}</span>
           <a class="go" href={href.project(project.slug, "train")}>{t("Train again")} <Icon name="next" size={15} /></a>
@@ -508,6 +523,18 @@
     background: rgba(255, 190, 70, 0.07);
     font-size: 13px;
     line-height: 1.5;
+  }
+  .retrain.done {
+    border-color: rgba(41, 240, 255, 0.45);
+    background: rgba(41, 240, 255, 0.07);
+  }
+  .retrain.done .go {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .rounds {
+    margin: 0 0 -10px;
+    color: var(--text-dim);
   }
   .retrain strong {
     color: var(--amber);

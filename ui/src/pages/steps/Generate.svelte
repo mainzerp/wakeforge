@@ -13,13 +13,13 @@
   let { project }: { project: Project } = $props();
 
   const DEFAULTS: GenerateParams = {
-    count: 20000,
+    count: 25000,
     speed: { lo: 0.85, hi: 1.2 },
     steps: 16,
     design_share: 0.15,
     filter: true,
   };
-  const PRESETS = [5000, 10000, 20000, 50000];
+  const PRESETS = [10000, 25000, 50000];
 
   let status = $state<GenerateStatus | null>(null);
   let params = $state<GenerateParams>(structuredClone(DEFAULTS));
@@ -154,6 +154,9 @@
           <input type="number" class="mono" min="100" step="1000" bind:value={params.count} disabled={running} aria-label={t("Target clips")} />
         </div>
         <p class="hint faint">{t("Generation tops the corpus up to this number, so you can always continue later.")}</p>
+        {#if total < status.targets.positives && !running}
+          <p class="hint warn">{t("{n} clips so far: models hold up from {min} on (fewer missed more on the device).", { n: total, min: status.targets.positives })}</p>
+        {/if}
       </div>
 
       <div class="field-block">

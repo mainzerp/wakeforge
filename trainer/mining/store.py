@@ -184,6 +184,12 @@ def delete(project: Path, mine_id: str) -> None:
     shutil.rmtree(mine_dir(project, mine_id))
 
 
+def rounds(project: Path) -> int:
+    """Mining rounds so far: training runs with at least one finished scan."""
+    return len({read_json(d / "mine.json", {}).get("run") for d in mine_dirs(project)
+                if read_json(d / "mine.json", {}).get("state") == "done"} - {None})
+
+
 def totals(project: Path) -> dict:
     count = lambda d: sum(1 for _ in d.glob("*.wav")) if d.is_dir() else 0  # noqa: E731
     return {"negatives": count(negatives_dir(project)), "positives": count(positives_dir(project))}

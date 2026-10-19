@@ -15,7 +15,7 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, model_validator
 
-from trainer import jobs, projects
+from trainer import jobs, projects, recipe
 from trainer.paths import DATA
 from trainer.tts import confusables, corpus
 from trainer.tts.voices import load_bank
@@ -105,6 +105,7 @@ def status(slug: str) -> dict:
         "confusables": {k: sound_alikes[k] for k in ("phrases", "total", "seconds")},
         "job": jobs.latest(path, "generate"),
         "confusable_job": jobs.latest(path, "confusables"),
+        "targets": {"positives": recipe.MIN_POSITIVES, "sound_alikes": recipe.MIN_SOUND_ALIKES},
         "active": jobs.active(),
     }
 

@@ -128,6 +128,9 @@
           {/each}
           <input type="number" class="mono" min="100" step="1000" bind:value={params.count} disabled={running} aria-label={t("Target sound-alike clips")} />
         </div>
+        {#if total < status.targets.sound_alikes && !running}
+          <p class="hint warn small">{t("{n} clips so far: use at least {min}, so the model learns to ignore these words.", { n: total, min: status.targets.sound_alikes })}</p>
+        {/if}
         <div class="actions">
           {#if running}
             <button class="danger" onclick={stop} disabled={busy}><Icon name="stop" size={15} /> {t("Stop")}</button>
